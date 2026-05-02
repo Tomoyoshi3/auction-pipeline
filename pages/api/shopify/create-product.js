@@ -1,16 +1,24 @@
+import { Redis } from '@upstash/redis';
+
+const redis = Redis.fromEnv();
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { title, description, price, imageUrl } = req.body;
-
-  const shopifyDomain = process.env.SHOPIFY_STORE_DOMAIN;
-  const accessToken = process.env.SHOPIFY_ACCESS_TOKEN;
+  const shop = process.env.SHOPIFY_STORE_DOMAIN;
 
   try {
+    const accessToken = await redis.get(`shopify_token:${shop}`);
+
+    if (!accessToken) {
+      return res.status(401).json({ error: 'Not authenticated. Please visit /api/auth/install first.' });
+    }
+
     const response = await fetch(
-      `https://${shopifyDomain}/admin/api/2026-04/products.json`,
+      `https://${shop}/admin/api/2026-04/products.json`,
       {
         method: 'POST',
         headers: {
